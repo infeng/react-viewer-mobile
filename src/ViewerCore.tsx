@@ -20,6 +20,7 @@ export interface ViewerCoreState {
   scale: number;
   imageWidth: number;
   imageHeight: number;
+  touch: boolean;
 }
 
 export default class ViewerCore extends React.Component<ViewerProps, Partial<ViewerCoreState>> {
@@ -33,6 +34,7 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
 
   prefixCls: string;
   touchStartTime: number;
+  startScale: number;
   startX: number;
   startY: number;
   moveX: number;
@@ -41,8 +43,12 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   zoomCenterY: number;
   touchDistance: number;
   pinchScale: number;
-  private containerWidth: number;
-  private containerHeight: number;
+  containerWidth: number;
+  containerHeight: number;
+
+  // test
+  text1: string;
+  text2: string;
 
   constructor(props) {
     super(props);
@@ -57,9 +63,11 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
       visible: this.props.visible,
       activeIndex: this.props.activeIndex,
       scale: 1,
+      touch: false,
     };
 
-    this.setContainerWidthHeight();
+    this.containerWidth = window.innerWidth;
+    this.containerHeight = window.innerHeight;
   }
 
   handleTouchStart(e) {
@@ -76,9 +84,13 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
       this.zoomCenterY = e.touches[0].pageY + (e.touches[1].pageY - e.touches[0].pageY) / 2;
     }else {
       this.touchStartTime = Date.now();
-      this.moveX = this.startX = e.touches[0].pageX;
-      this.moveY = this.startY = e.touches[0].pageY;
     }
+    this.moveX = this.startX = e.touches[0].pageX;
+    this.moveY = this.startY = e.touches[0].pageY;
+    this.startScale = this.state.scale;
+    this.setState({
+      touch: true,
+    });
   }
 
   handleTouchMove(e) {
@@ -91,9 +103,9 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
         y: e.touches[1].pageY,
       });
       let pinchScale = touchDistance / this.touchDistance;
-      let newScale = this.state.scale + pinchScale - this.pinchScale;
-      newScale = Math.max(1, newScale);
-      newScale = Math.min(2.5, newScale);
+      let newScale = this.state.scale + this.startScale * (pinchScale - this.pinchScale);
+      this.text1 = `${pinchScale}`;
+      this.text2 = `${newScale}`;
       this.handleZoom(this.zoomCenterX, this.zoomCenterY, pinchScale > 1 ? 1 : -1, newScale);
       this.pinchScale = pinchScale;
     }else {
@@ -104,32 +116,45 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
           left: newLeft,
           top: newTop,
         });
+        this.moveX = e.touches[0].pageX;
+        this.moveY = e.touches[0].pageY;
       }
     }
-    this.moveX = e.touches[0].pageX;
-    this.moveY = e.touches[0].pageY;
   }
 
   handleTouchEnd(e) {
-    let touchInterval = Date.now() - this.touchStartTime;
-    if (Math.abs(this.moveX - this.startX) > 10 ||
-    Math.abs(this.moveY - this.startY) > 10) {
-
-    }else {
-      if (touchInterval < 500) {
-        this.props.onClose();
+    if (e.touches.length === 0) {
+      this.setState({
+        touch: false,
+      });
+      let touchInterval = Date.now() - this.touchStartTime;
+      if (Math.abs(this.moveX - this.startX) > 10 ||
+      Math.abs(this.moveY - this.startY) > 10) {
+      }else {
+        if (touchInterval < 500) {
+          this.props.onClose();
+        }
       }
-    }
-    this.startX = this.startY = this.moveX = this.moveY = null;
-    this.pinchScale = 1;
-  }
-
-  setContainerWidthHeight() {
-    this.containerWidth = window.innerWidth;
-    this.containerHeight = window.innerHeight;
-    if (this.props.container) {
-      this.containerWidth = this.props.container.offsetWidth;
-      this.containerHeight = this.props.container.offsetHeight;
+      this.startX = this.startY = this.moveX = this.moveY = null;
+      this.pinchScale = 1;
+      this.touchDistance = null;
+      if (this.state.scale < 1) {
+        setTimeout(() => {
+          const [ width, height ] = this.getImgWidthHeight(this.state.imageWidth, this.state.imageHeight);
+          let left = ( this.containerWidth - width ) / 2;
+          let top = (this.containerHeight - height) / 2;
+          this.setState({
+            width: width,
+            height: height,
+            left: left,
+            top:  top,
+            scale: 1,
+          });
+        }, 0);
+      }
+    }else {
+      this.moveX = e.touches[0].pageX;
+      this.moveY = e.touches[0].pageY;
     }
   }
 
@@ -143,8 +168,8 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   getImgWidthHeight(imgWidth, imgHeight) {
     let width = 0;
     let height = 0;
-    let maxWidth = this.containerWidth * .8;
-    let maxHeight = this.containerHeight * .8;
+    let maxWidth = this.containerWidth * .9;
+    let maxHeight = this.containerHeight * .9;
     width = Math.min(maxWidth, imgWidth);
     height = (width / imgWidth) * imgHeight;
     if (height > maxHeight) {
@@ -175,6 +200,7 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
         height: 0,
         left: this.containerWidth / 2,
         top:  this.containerHeight / 2,
+        scale: 1,
       });
     }else {
       this.setState({
@@ -187,14 +213,12 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
       if (firstLoad) {
         setTimeout(() => {
           this.setState({
-            activeIndex: activeIndex,
             imageWidth: imgWidth,
             imageHeight: imgHeight,
-            scale: 1,
           });
           let imgCenterXY = this.getImageCenterXY();
           this.handleZoom(imgCenterXY.x, imgCenterXY.y, 1, 1);
-        }, 50);
+        }, 0);
       }else {
         const [ width, height ] = this.getImgWidthHeight(imgWidth, imgHeight);
         let left = ( this.containerWidth - width ) / 2;
@@ -220,22 +244,6 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
     };
   }
 
-  handleChangeImgState(width, height, top, left) {
-    this.setState({
-      width: width,
-      height: height,
-      top: top,
-      left: left,
-    });
-  }
-
-  handleResize() {
-    this.setContainerWidthHeight();
-    if (this.props.visible) {
-      this.loadImg(this.state.activeIndex);
-    }
-  }
-
   handleZoom(targetX, targetY, direct, scale) {
     let diffScale = Math.abs(scale - this.state.scale);
     let imgCenterXY = this.getImageCenterXY();
@@ -254,8 +262,8 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
     this.setState({
       width: this.state.width + diffWidth,
       height: this.state.height + diffHeight,
-      top: this.state.top + -diffHeight / 2 + -direct * diffY * diffScale,
-      left: this.state.left + -diffWidth / 2 + -direct * diffX * diffScale,
+      top: this.state.top + -diffHeight / 2 - direct * diffX * diffScale,
+      left: this.state.left + -diffWidth / 2 - direct * diffY * diffScale,
       scale: scale,
     });
   }
@@ -324,12 +332,11 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
         height={this.state.height}
         top={this.state.top}
         left={this.state.left}
-        onChangeImgState={this.handleChangeImgState.bind(this)}
-        onResize={this.handleResize.bind(this)}
-        onZoom={this.handleZoom.bind(this)}
         zIndex={zIndex + 5}
+        touch={this.state.touch}
         />
-        <div style={{position: 'absolute',top: 0, left: 0, zIndex: zIndex + 10}}>{this.state.left}</div>
+        <div style={{position: 'absolute',top: 0, left: 0, zIndex: zIndex + 10}}>{this.text1}</div>
+        <div style={{position: 'absolute',top: 20, left: 0, zIndex: zIndex + 10}}>{this.text2}</div>
       </div>
     );
   }

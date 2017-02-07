@@ -47,5 +47,18 @@
     > img.drag {
       cursor: move;
     }
-  }  
+  }
+
+  @transitionDuration: .3s;
+  @transitionFunc: ease-out;
+
+  &-transition {
+    transition: opacity @transitionDuration @transitionFunc;
+  }
+
+  &-image-transition {
+    transition-property: width, height, margin, transform;
+    transition-duration: @transitionDuration;
+    transition-timing-function: @transitionFunc;
+  }
 }

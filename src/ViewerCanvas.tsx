@@ -8,42 +8,14 @@ export interface ViewerCanvasProps {
   height: number;
   top: number;
   left: number;
-  onChangeImgState: (width: number, height: number, top: number, left: number) => void;
-  onResize: () => void;
-  onZoom: (targetX: number, targetY: number, direct: number, scale: number) => void;
   zIndex: number;
+  touch: boolean;
 }
 
-export interface ViewerCanvasState {
-  isMouseDown?: boolean;
-  mouseX?: number;
-  mouseY?: number;
-}
-
-export default class ViewerCanvas extends React.Component<ViewerCanvasProps, ViewerCanvasState> {
+export default class ViewerCanvas extends React.Component<ViewerCanvasProps, any> {
 
   constructor() {
     super();
-
-    this.state = {
-      isMouseDown: false,
-      mouseX: 0,
-      mouseY: 0,
-    };
-
-    this.handleResize = this.handleResize.bind(this);
-  }
-
-  componentDidMount() {
-    window.addEventListener('resize', this.handleResize, false);
-  }
-
-  handleResize(e) {
-    this.props.onResize();
-  }
-
-  componentWillReceiveProps(nextProps: ViewerCanvasProps) {
-
   }
 
   render() {
@@ -55,7 +27,7 @@ export default class ViewerCanvas extends React.Component<ViewerCanvasProps, Vie
     };
 
     let imgClass = '';
-    if (!this.state.isMouseDown) {
+    if (!this.props.touch) {
       imgClass += ` ${this.props.prefixCls}-image-transition`;
     }
 
