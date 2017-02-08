@@ -38,7 +38,7 @@ class App extends React.Component<any, any> {
         <nav className="navbar navbar-fixed-top">
           <div className="container-fluid">
             <div className="navbar-brand">
-              <a>react-viewer</a>
+              <a>react-viewer-mobile</a>
             </div>
           </div>
         </nav>
