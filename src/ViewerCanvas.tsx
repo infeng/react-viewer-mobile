@@ -10,6 +10,7 @@ export interface ViewerCanvasProps {
   left: number;
   zIndex: number;
   touch: boolean;
+  translateX: number;
 }
 
 export default class ViewerCanvas extends React.Component<ViewerCanvasProps, any> {
@@ -27,12 +28,15 @@ export default class ViewerCanvas extends React.Component<ViewerCanvasProps, any
     };
 
     let imgClass = '';
+    let canvasClass = `${this.props.prefixCls}-canvas`;
     if (!this.props.touch) {
       imgClass += ` ${this.props.prefixCls}-image-transition`;
+      canvasClass += ` ${this.props.prefixCls}-canvas-transition`;
     }
 
-    let style = {
+    let canvasStyle = {
       zIndex: this.props.zIndex,
+      transform: `translateX(${this.props.translateX}px)`,
     };
 
     let imgNode = null;
@@ -46,8 +50,8 @@ export default class ViewerCanvas extends React.Component<ViewerCanvasProps, any
 
     return (
       <div
-      className={`${this.props.prefixCls}-canvas`}
-      style={style}
+      className={canvasClass}
+      style={canvasStyle}
       >
         {imgNode}
       </div>

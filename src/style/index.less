@@ -29,6 +29,9 @@
     z-index: @zIndex;
   }
 
+  @transitionDuration: .3s;
+  @transitionFunc: ease-out;  
+
   &-canvas {
     position: absolute;
     top: 0;
@@ -47,10 +50,10 @@
     > img.drag {
       cursor: move;
     }
+    &-transition {
+      transition: transform @transitionDuration @transitionFunc;
+    }
   }
-
-  @transitionDuration: .3s;
-  @transitionFunc: ease-out;
 
   &-transition {
     transition: opacity @transitionDuration @transitionFunc;
