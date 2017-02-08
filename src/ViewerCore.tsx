@@ -134,6 +134,7 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   }
 
   handleTouchEnd(e) {
+    let touchInterval = Date.now() - this.touchStartTime;
     if (e.touches.length === 0) {
       this.setState({
         touch: false,
@@ -147,26 +148,35 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
       }else {
         if (this.state.swiperDistance !== 0) {
           let criticalValue = this.containerWidth * .4;
-          if (this.state.swiperDistance > -criticalValue &&
-          this.state.swiperDistance < criticalValue) {
-            this.setState({
-              swiperDistance: 0,
-            });
-          }else if (this.state.swiperDistance <= -criticalValue) {
-            let newActiveIndex = this.state.activeIndex + 1;
-            if (newActiveIndex === this.props.images.length) {
-              newActiveIndex = this.state.activeIndex;
+          let canChange = false;
+          let shortTime = touchInterval < 300;
+          if (this.state.swiperDistance <= -criticalValue ||
+          this.state.swiperDistance >= criticalValue || shortTime) {
+            canChange = true;
+          }
+          if (canChange) {
+            let newActiveIndex;
+            if (this.state.swiperDistance <= -criticalValue ||
+            (shortTime && this.state.swiperDistance < 0)) {
+              newActiveIndex = this.state.activeIndex + 1;
+              if (newActiveIndex === this.props.images.length) {
+                newActiveIndex = this.state.activeIndex;
+              }
+            }
+            if (this.state.swiperDistance >= criticalValue ||
+            (shortTime && this.state.swiperDistance > 0)) {
+              newActiveIndex = this.state.activeIndex - 1;
+              if (newActiveIndex < 0) {
+                newActiveIndex = this.state.activeIndex;
+              }
             }
             this.loadImg(newActiveIndex);
           }else {
-            let newActiveIndex = this.state.activeIndex - 1;
-            if (newActiveIndex < 0) {
-              newActiveIndex = this.state.activeIndex;
-            }
-            this.loadImg(newActiveIndex);
+            this.setState({
+              swiperDistance: 0,
+            });
           }
         }else {
-          let touchInterval = Date.now() - this.touchStartTime;
           if (Math.abs(this.moveX - this.startX) > 10 ||
           Math.abs(this.moveY - this.startY) > 10) {
           }else {
