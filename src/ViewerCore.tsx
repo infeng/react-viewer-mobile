@@ -437,6 +437,9 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
               />
             );
           }else {
+            if (Math.abs(this.state.activeIndex - index) > 1) {
+              return null;
+            }
             return (
               <ViewerCanvas
               key={index}
