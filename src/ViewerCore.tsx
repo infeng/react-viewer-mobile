@@ -9,7 +9,7 @@ const DEFAULT_IMAGE_HEIGHT: number = window.innerWidth * MAX_SIZE_SCALE;
 
 function noop() {}
 
-interface Point {
+export interface Point {
   x: number;
   y: number;
 }

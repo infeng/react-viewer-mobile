@@ -17,12 +17,8 @@ export default class Viewer extends React.Component<ViewerProps, any> {
   renderViewer() {
     if (this.props.visible || this.component) {
       if (!this.container) {
-        if (this.props.container) {
-          this.container = this.props.container;
-        }else {
-          this.container = document.createElement('div');
-          document.body.appendChild(this.container);
-        }
+        this.container = document.createElement('div');
+        document.body.appendChild(this.container);
       }
       let instance = this;
       ReactDOM.unstable_renderSubtreeIntoContainer(
@@ -49,12 +45,7 @@ export default class Viewer extends React.Component<ViewerProps, any> {
   }
 
   componentWillUnmount() {
-    if (this.props.visible) {
-      this.props.onClose();
-      this.removeViewer();
-    } else {
-      this.removeViewer();
-    }
+    this.removeViewer();
   }
 
   componentDidMount() {
