@@ -198,7 +198,9 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
           Math.abs(this.state.moveY - this.state.startY) > 10) {
           }else {
             if (touchInterval < 500) {
-              this.props.onClose();
+              this.setState({
+                visible: false,
+              });
             }
           }
         }
@@ -356,7 +358,7 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   }
 
   componentWillReceiveProps(nextProps: ViewerProps) {
-    if (this.props.visible !== nextProps.visible) {
+    if (this.state.visible !== nextProps.visible) {
       this.loadImg(nextProps.activeIndex, true);
       setTimeout(() => {
         this.setState({
