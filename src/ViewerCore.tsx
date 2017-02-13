@@ -87,8 +87,8 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
     let zoomCenterX = 0;
     let zoomCenterY = 0;
     let multiTouch = false;
-    let touchStartTime = 0;
-    if (e.touches.length > 1) {
+    let touchStartTime = Date.now();
+    if (e.touches.length > 1 && this.state.swiperDistance === 0) {
       touchDistance = this.getDistance({
         x: e.touches[0].pageX,
         y: e.touches[0].pageY,
@@ -99,8 +99,6 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
       zoomCenterX = e.touches[0].pageX + (e.touches[1].pageX - e.touches[0].pageX) / 2;
       zoomCenterY = e.touches[0].pageY + (e.touches[1].pageY - e.touches[0].pageY) / 2;
       multiTouch = true;
-    }else {
-      touchStartTime = Date.now();
     }
     let startX = e.touches[0].pageX;
     let startY = e.touches[0].pageY;
@@ -130,7 +128,9 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
       });
       let pinchScale = touchDistance / this.state.touchDistance;
       let newScale = this.state.scale + this.state.startScale * (pinchScale - this.state.pinchScale);
-      this.handleZoom(this.state.zoomCenterX, this.state.zoomCenterY, newScale, pinchScale);
+      if (newScale <= 3 && this.state.swiperDistance === 0) {
+        this.handleZoom(this.state.zoomCenterX, this.state.zoomCenterY, newScale, pinchScale);
+      }
     }else {
       if (this.state.scale > 1) {
         let newLeft = this.state.left + e.touches[0].pageX - this.state.moveX;
@@ -214,6 +214,7 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
         touchDistance: 0,
         multiTouch: false,
         touch: false,
+        touchStartTime: 0,
       });
     }else {
       this.setState({
