@@ -1,15 +1,3 @@
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
+import Viewer from './Viewer';
 
-class App extends React.Component<any, any> {
-  render() {
-    return (
-      <p>Hello World</p>
-    );
-  }
-}
-
-ReactDOM.render(
-  <App/>,
-  document.getElementById('root'),
-);
+export default Viewer;
