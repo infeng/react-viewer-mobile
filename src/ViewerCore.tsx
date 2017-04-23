@@ -15,7 +15,6 @@ export interface Point {
 }
 
 export interface ViewerCoreState {
-  visible: boolean;
   activeIndex: number;
   width: number;
   height: number;
@@ -61,7 +60,6 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
 
     this.prefixCls = 'react-viewer-mobile';
     this.state = {
-      visible: this.props.visible,
       activeIndex: this.props.activeIndex,
       scale: 1,
       touch: false,
@@ -83,6 +81,7 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
 
   handleTouchStart(e) {
     e.preventDefault();
+    e.stopPropagation();
     let touchDistance = 0;
     let zoomCenterX = 0;
     let zoomCenterY = 0;
@@ -118,6 +117,8 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   }
 
   handleTouchMove(e) {
+    e.preventDefault();
+    e.stopPropagation();
     if (e.touches.length > 1) {
       let touchDistance = this.getDistance({
         x: e.touches[0].pageX,
@@ -153,6 +154,8 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   }
 
   handleTouchEnd(e) {
+    e.preventDefault();
+    e.stopPropagation();
     let touchInterval = Date.now() - this.state.touchStartTime;
     if (e.touches.length === 0) {
       if (this.state.multiTouch) {
@@ -360,11 +363,10 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   }
 
   componentWillReceiveProps(nextProps: ViewerProps) {
-    if (this.state.visible !== nextProps.visible) {
+    if (this.props.visible !== nextProps.visible) {
       this.loadImg(nextProps.activeIndex, true);
       setTimeout(() => {
         this.setState({
-          visible: nextProps.visible,
           swiperDistance: 0,
         });
       }, 10);
@@ -380,13 +382,13 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
     let className = `${this.prefixCls}`;
 
     let viewerStryle: React.CSSProperties = {
-      opacity: this.state.visible ? 1 : 0,
+      opacity: this.props.visible ? 1 : 0,
     };
 
-    if (!this.state.visible) {
+    if (!this.props.visible) {
       viewerStryle.display = 'none';
     }
-    if (this.state.visible) {
+    if (this.props.visible) {
       viewerStryle.display = 'block';
     }
 
@@ -397,7 +399,7 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
       alt: '',
     };
     let images = this.props.images || [];
-    if (this.state.visible) {
+    if (this.props.visible) {
       if (images.length > 0 && this.state.activeIndex >= 0) {
         activeImg = images[this.state.activeIndex];
       }
