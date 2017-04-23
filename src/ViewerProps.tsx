@@ -12,6 +12,7 @@ interface ViewerProps {
   activeIndex?: number;
   /** 自定义viewer组件的z-index */
   zIndex?: number;
+  onClose: () => void;
 }
 
 export default ViewerProps;

@@ -198,9 +198,10 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
           Math.abs(this.state.moveY - this.state.startY) > 10) {
           }else {
             if (touchInterval < 500) {
-              this.setState({
-                visible: false,
-              });
+              this.props.onClose();
+              // this.setState({
+              //   visible: false,
+              // });
             }
           }
         }
