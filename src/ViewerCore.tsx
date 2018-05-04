@@ -79,6 +79,10 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
     this.containerHeight = window.innerHeight;
   }
 
+  handleBodyTouchmove = e => {
+    e.preventDefault();
+  }
+
   handleTouchStart(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -201,7 +205,7 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
           Math.abs(this.state.moveY - this.state.startY) > 10) {
           }else {
             if (touchInterval < 500) {
-              this.props.onClose();
+              this.close();
               // this.setState({
               //   visible: false,
               // });
@@ -359,12 +363,22 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   }
 
   componentDidMount() {
-    this.loadImg(this.props.activeIndex, true);
+    this.startVisible(this.props.activeIndex);
+  }
+
+  startVisible = (activeIndex) => {
+    document.body.addEventListener('touchmove', this.handleBodyTouchmove, { passive: false });
+    this.loadImg(activeIndex, true);
+  }
+
+  close = () => {
+    document.body.removeEventListener('touchmove', this.handleBodyTouchmove);
+    this.props.onClose();
   }
 
   componentWillReceiveProps(nextProps: ViewerProps) {
-    if (this.props.visible !== nextProps.visible) {
-      this.loadImg(nextProps.activeIndex, true);
+    if (!this.props.visible && nextProps.visible) {
+      this.startVisible(nextProps.activeIndex);
       setTimeout(() => {
         this.setState({
           swiperDistance: 0,
@@ -383,6 +397,10 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
 
     let viewerStryle: React.CSSProperties = {
       opacity: this.props.visible ? 1 : 0,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      position: 'absolute',
+      top: 0,
     };
 
     if (!this.props.visible) {
