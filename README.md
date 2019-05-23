@@ -34,7 +34,7 @@ class App extends React.Component<any, any> {
         <button onClick={() => { this.setState({ visible: !this.state.visible }); } }>show</button>
         <Viewer
         visible={this.state.visible}
-        images={[src: '', alt: '']}
+        images={[{src: '', alt: ''}]}
         />
       </div>
     );
