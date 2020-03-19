@@ -186,7 +186,7 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
     const angX = endX - startX;
     const angY = endY - startY;
 
-    //如果滑动距离太短
+    // 如果滑动距离太短
     if (Math.abs(angX) < 2 && Math.abs(angY) < 2) {
       return 'not';
     }
@@ -223,7 +223,8 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
         if (this.isUpDownDirection()) {
           let top = this.state.top;
           let left = this.state.left;
-          if ((this.state.top + this.state.height) < this.containerHeight && (this.state.height > this.containerHeight)) {
+          if ((this.state.top + this.state.height) < this.containerHeight
+          && (this.state.height > this.containerHeight)) {
             top = this.containerHeight - this.state.height;
           }
           if (this.state.top >= MAX_TOP && this.state.height > this.containerHeight) {
