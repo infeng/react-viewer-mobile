@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 const img2 = require('./images/landscape2.jpg');
 const img = require('./images/landscape.jpg');
-const img3 = require('./images/tibet-6.jpg');
+const img3 = require('./images/downloadfile.png');
 const img4 = require('./images/image4.jpg');
 const forkImg = require('./images/fork_me_ribbon.svg');
 import './index.less';

@@ -6,6 +6,8 @@ import ViewerCanvas from './ViewerCanvas';
 const MAX_SIZE_SCALE: number = .9;
 const DEFAULT_IMAGE_WIDTH: number = window.innerWidth * MAX_SIZE_SCALE;
 const DEFAULT_IMAGE_HEIGHT: number = window.innerWidth * MAX_SIZE_SCALE;
+const MIN_TOP = -60;
+const MAX_TOP = 60;
 
 function noop() {}
 
@@ -38,6 +40,8 @@ export interface ViewerCoreState {
   multiTouch: boolean;
 }
 
+type Direction = 'not' | 'up' | 'down' | 'left' | 'right';
+
 export default class ViewerCore extends React.Component<ViewerProps, Partial<ViewerCoreState>> {
   static defaultProps = {
     visible: false,
@@ -50,6 +54,8 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   prefixCls: string;
   containerWidth: number;
   containerHeight: number;
+  moveLock: boolean;
+  direction: Direction;
 
   // test
   text1: string;
@@ -77,6 +83,8 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
 
     this.containerWidth = window.innerWidth;
     this.containerHeight = window.innerHeight;
+    this.moveLock = false;
+    this.direction = 'not';
   }
 
   handleBodyTouchmove = e => {
@@ -137,16 +145,29 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
         this.handleZoom(this.state.zoomCenterX, this.state.zoomCenterY, newScale, pinchScale);
       }
     }else {
-      if (this.state.scale > 1) {
-        let newLeft = this.state.left + e.touches[0].pageX - this.state.moveX;
-        let newTop = this.state.top + e.touches[0].pageY - this.state.moveY;
+      let newLeft = this.state.left + e.touches[0].pageX - this.state.moveX;
+      let newTop = this.state.top + e.touches[0].pageY - this.state.moveY;
+      const direction = this.getDirection(this.state.moveX, this.state.moveY, e.touches[0].pageX, e.touches[0].pageY);
+      if (!this.moveLock) {
+        this.direction = direction;
+      }
+      if (this.direction === 'up' || this.direction === 'down') {
+        if (this.state.height <= this.containerHeight) {
+          return;
+        }
+        this.moveLock = true;
+        if ((newTop + this.state.height) - this.containerHeight < MIN_TOP) {
+          newTop = this.state.top;
+        }
         this.setState({
-          left: newLeft,
-          top: newTop,
+          left: this.state.scale === 1 ? this.state.left : newLeft,
+          top: Math.min(newTop, MAX_TOP),
           moveX: e.touches[0].pageX,
           moveY: e.touches[0].pageY,
         });
-      }else {
+      }
+      if (this.direction === 'left' || this.direction === 'right') {
+        this.moveLock = true;
         let swiperDistance = this.state.swiperDistance + e.touches[0].pageX - this.state.moveX;
         this.setState({
           swiperDistance: swiperDistance,
@@ -157,9 +178,39 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
     }
   }
 
+  getDirection = (startX, startY, endX, endY): Direction => {
+    function getAngle(angX, angY) {
+      return Math.atan2(angY, angX) * 180 / Math.PI;
+    }
+
+    const angX = endX - startX;
+    const angY = endY - startY;
+
+    //如果滑动距离太短
+    if (Math.abs(angX) < 2 && Math.abs(angY) < 2) {
+      return 'not';
+    }
+
+    const angle = getAngle(angX, angY);
+    if (angle >= -135 && angle <= -45) {
+      return 'up';
+    } else if (angle > 45 && angle < 135) {
+      return 'down';
+    } else if ((angle >= 135 && angle <= 180) || (angle >= -180 && angle < -135)) {
+      return 'left';
+    } else if (angle >= -45 && angle <= 45) {
+      return 'right';
+    }
+  }
+
+  isUpDownDirection = () => {
+    return this.direction === 'up' || this.direction === 'down';
+  }
+
   handleTouchEnd(e) {
     e.preventDefault();
     e.stopPropagation();
+    this.moveLock = false;
     let touchInterval = Date.now() - this.state.touchStartTime;
     if (e.touches.length === 0) {
       if (this.state.multiTouch) {
@@ -169,6 +220,30 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
           }, 0);
         }
       }else {
+        if (this.isUpDownDirection()) {
+          let top = this.state.top;
+          let left = this.state.left;
+          if ((this.state.top + this.state.height) < this.containerHeight && (this.state.height > this.containerHeight)) {
+            top = this.containerHeight - this.state.height;
+          }
+          if (this.state.top >= MAX_TOP && this.state.height > this.containerHeight) {
+            top = 0;
+          }
+          if (left > 0) {
+            left = 0;
+          }
+          if ((left + this.state.width) < this.containerWidth) {
+            left = this.containerWidth - this.state.width;
+          }
+          this.setState({
+            top,
+            left,
+            touch: false,
+          });
+          return;
+        }
+
+        this.direction = 'not';
         if (this.state.swiperDistance !== 0) {
           let criticalValue = this.containerWidth * .4;
           let canChange = false;
@@ -254,14 +329,10 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   getImgDefaultSize(imgWidth, imgHeight) {
     let width = 0;
     let height = 0;
-    let maxWidth = this.containerWidth * MAX_SIZE_SCALE;
-    let maxHeight = this.containerHeight * MAX_SIZE_SCALE;
-    width = Math.min(maxWidth, imgWidth);
+    let maxWidth = this.containerWidth;
+    // let maxHeight = this.containerHeight;
+    width = maxWidth;
     height = (width / imgWidth) * imgHeight;
-    if (height > maxHeight) {
-      height = maxHeight;
-      width = (height / imgHeight) * imgWidth;
-    }
     let left = ( this.containerWidth - width ) / 2;
     let top = (this.containerHeight - height) / 2;
     return {
