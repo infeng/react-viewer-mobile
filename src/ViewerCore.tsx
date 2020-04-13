@@ -25,19 +25,13 @@ export interface ViewerCoreState {
   scale: number;
   imageWidth: number;
   imageHeight: number;
-  touch: boolean;
   swiperDistance: number;
-  touchStartTime: number;
   startScale: number;
-  startX: number;
-  startY: number;
-  moveX: number;
-  moveY: number;
   zoomCenterX: number;
   zoomCenterY: number;
   touchDistance: number;
   pinchScale: number;
-  multiTouch: boolean;
+  touch: boolean;
 }
 
 type Direction = 'not' | 'up' | 'down' | 'left' | 'right';
@@ -56,10 +50,21 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   containerHeight: number;
   moveLock: boolean;
   direction: Direction;
+  multiTouch: boolean;
+  touchMove: boolean;
+  startX: number;
+  startY: number;
+  moveX: number;
+  moveY: number;
+  touchStartTime: number;
+  lastMoveTime: number;
+  lastMoveX: number;
+  lastMoveY: number;
+  stopInertiaMove: boolean;
 
   // test
-  text1: string;
-  text2: string;
+  text1: React.RefObject<HTMLDivElement>;
+  text2: React.RefObject<HTMLDivElement>;
 
   constructor(props) {
     super(props);
@@ -68,23 +73,37 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
     this.state = {
       activeIndex: this.props.activeIndex,
       scale: 1,
-      touch: false,
       swiperDistance: 0,
-      touchStartTime: 0,
       touchDistance: 0,
-      startX: 0,
-      startY: 0,
-      moveX: 0,
-      moveY: 0,
       pinchScale: 1,
       zoomCenterX: 0,
       zoomCenterY: 0,
+      touch: false,
     };
+    this.startX = this.startY = this.moveX = this.moveY = 0;
+    this.touchStartTime = 0;
 
     this.containerWidth = window.innerWidth;
     this.containerHeight = window.innerHeight;
     this.moveLock = false;
     this.direction = 'not';
+    this.multiTouch = false;
+    this.touchMove = false;
+    this.stopInertiaMove = false;
+    this.text1 = React.createRef();
+    this.text2 = React.createRef();
+  }
+
+  setText1 = (message: any) => {
+    if (this.text1.current) {
+      this.text1.current.innerHTML = message;
+    }
+  }
+
+  setText2 = (message: any) => {
+    if (this.text2.current) {
+      this.text2.current.innerHTML = message;
+    }
   }
 
   handleBodyTouchmove = e => {
@@ -92,13 +111,16 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   }
 
   handleTouchStart(e) {
-    e.preventDefault();
-    e.stopPropagation();
+    // e.stopPropagation();
+    this.touchMove = false;
+    this.stopInertiaMove = true;
     let touchDistance = 0;
     let zoomCenterX = 0;
     let zoomCenterY = 0;
-    let multiTouch = false;
-    let touchStartTime = Date.now();
+    this.multiTouch = false;
+    this.direction = 'not';
+    this.touchStartTime = Date.now();
+    this.lastMoveTime = Date.now();
     if (e.touches.length > 1 && this.state.swiperDistance === 0) {
       touchDistance = this.getDistance({
         x: e.touches[0].pageX,
@@ -109,29 +131,27 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
       });
       zoomCenterX = e.touches[0].pageX + (e.touches[1].pageX - e.touches[0].pageX) / 2;
       zoomCenterY = e.touches[0].pageY + (e.touches[1].pageY - e.touches[0].pageY) / 2;
-      multiTouch = true;
+      this.multiTouch = true;
     }
     let startX = e.touches[0].pageX;
     let startY = e.touches[0].pageY;
+    this.startX = this.moveX = this.lastMoveX = startX;
+    this.startY = this.moveY = this.lastMoveY = startY;
     this.setState({
-      touch: true,
-      startX: startX,
-      startY: startY,
-      moveX: startX,
-      moveY: startY,
       startScale: this.state.scale,
       touchDistance,
       zoomCenterX,
       zoomCenterY,
-      multiTouch,
-      touchStartTime,
+      touch: true,
     });
   }
 
   handleTouchMove(e) {
-    e.preventDefault();
     e.stopPropagation();
+    // console.log('--test--', 'move');
+    this.touchMove = true;
     if (e.touches.length > 1) {
+      this.multiTouch = true;
       let touchDistance = this.getDistance({
         x: e.touches[0].pageX,
         y: e.touches[0].pageY,
@@ -145,12 +165,10 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
         this.handleZoom(this.state.zoomCenterX, this.state.zoomCenterY, newScale, pinchScale);
       }
     }else {
-      let newLeft = this.state.left + e.touches[0].pageX - this.state.moveX;
-      let newTop = this.state.top + e.touches[0].pageY - this.state.moveY;
-      const direction = this.getDirection(this.state.moveX, this.state.moveY, e.touches[0].pageX, e.touches[0].pageY);
-      if (!this.moveLock) {
-        this.direction = direction;
-      }
+      let newLeft = this.state.left + e.touches[0].pageX - this.moveX;
+      let newTop = this.state.top + e.touches[0].pageY - this.moveY;
+      const direction = this.getDirection(this.moveX, this.moveY, e.touches[0].pageX, e.touches[0].pageY);
+      this.direction = direction;
       if (this.direction === 'up' || this.direction === 'down') {
         if (this.state.height <= this.containerHeight) {
           return;
@@ -159,22 +177,29 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
         if ((newTop + this.state.height) - this.containerHeight < MIN_TOP) {
           newTop = this.state.top;
         }
+        this.moveX = e.touches[0].pageX;
+        this.moveY = e.touches[0].pageY;
         this.setState({
           left: this.state.scale === 1 ? this.state.left : newLeft,
           top: Math.min(newTop, MAX_TOP),
-          moveX: e.touches[0].pageX,
-          moveY: e.touches[0].pageY,
         });
+        const now = Date.now();
+        this.stopInertiaMove = true;
+        if (now - this.lastMoveTime > 300) {
+          this.lastMoveTime = now;
+          this.lastMoveY = this.moveY;
+          this.lastMoveX = this.moveX;
+        }
       }
-      if (this.direction === 'left' || this.direction === 'right') {
-        this.moveLock = true;
-        let swiperDistance = this.state.swiperDistance + e.touches[0].pageX - this.state.moveX;
-        this.setState({
-          swiperDistance: swiperDistance,
-          moveX: e.touches[0].pageX,
-          moveY: e.touches[0].pageY,
-        });
-      }
+      // if (this.direction === 'left' || this.direction === 'right') {
+      //   this.moveLock = true;
+      //   let swiperDistance = this.state.swiperDistance + e.touches[0].pageX - this.state.moveX;
+      //   this.setState({
+      //     swiperDistance: swiperDistance,
+      //     moveX: e.touches[0].pageX,
+      //     moveY: e.touches[0].pageY,
+      //   });
+      // }
     }
   }
 
@@ -210,10 +235,12 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
   handleTouchEnd(e) {
     e.preventDefault();
     e.stopPropagation();
+    this.stopInertiaMove = false;
+    this.multiTouch = false;
     this.moveLock = false;
-    let touchInterval = Date.now() - this.state.touchStartTime;
+    let touchInterval = Date.now() - this.touchStartTime;
     if (e.touches.length === 0) {
-      if (this.state.multiTouch) {
+      if (this.multiTouch) {
         if (this.state.scale < 1) {
           setTimeout(() => {
             this.resetImage();
@@ -223,24 +250,72 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
         if (this.isUpDownDirection()) {
           let top = this.state.top;
           let left = this.state.left;
+          let shouldMoveEnd = true;
           if ((this.state.top + this.state.height) < this.containerHeight
           && (this.state.height > this.containerHeight)) {
             top = this.containerHeight - this.state.height;
+            shouldMoveEnd = false;
           }
           if (this.state.top >= MAX_TOP && this.state.height > this.containerHeight) {
             top = 0;
+            shouldMoveEnd = false;
           }
           if (left > 0) {
             left = 0;
+            shouldMoveEnd = false;
           }
           if ((left + this.state.width) < this.containerWidth) {
             left = this.containerWidth - this.state.width;
+            shouldMoveEnd = false;
           }
-          this.setState({
-            top,
-            left,
-            touch: false,
+          if (!shouldMoveEnd) {
+            this.setState({
+              top,
+              left,
+              touch: false,
+            });
+            return;
+          }
+          const distance = this.getDistance({
+            x: this.lastMoveX,
+            y: this.lastMoveY,
+          }, {
+            x: this.moveX,
+            y: this.moveY,
           });
+          let speed = distance / (Date.now() - this.lastMoveTime);
+          this.setText1(distance);
+          let start = null;
+          let shouldEnd = false;
+          let prev = null;
+          const setp = (timestamp: number) => {
+            if (!start) {
+              start = timestamp;
+            }
+            let d = prev ? timestamp - prev : 16.7;
+            prev = timestamp;
+            speed = speed - .01;
+            let newTop = this.state.top + speed * d * (this.direction === 'up' ? -1 : 1);
+            if (newTop > 0) {
+              newTop = 0;
+              shouldEnd = true;
+            }
+            if ((newTop + this.state.height) < this.containerHeight
+            && (this.state.height > this.containerHeight)) {
+              newTop = this.containerHeight - this.state.height;
+              shouldEnd = true;
+            }
+            this.setState({
+              top: newTop,
+            });
+            if (speed < 0) {
+              speed = 0;
+            }
+            if (speed > 0 && !shouldEnd && !this.stopInertiaMove) {
+              window.requestAnimationFrame(setp);
+            }
+          };
+          window.requestAnimationFrame(setp);
           return;
         }
 
@@ -277,10 +352,10 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
             });
           }
         }else {
-          if (Math.abs(this.state.moveX - this.state.startX) > 10 ||
-          Math.abs(this.state.moveY - this.state.startY) > 10) {
+          if (Math.abs(this.moveX - this.startX) > 10 ||
+          Math.abs(this.moveY - this.startY) > 10) {
           }else {
-            if (touchInterval < 500) {
+            if (touchInterval < 500 && !this.touchMove) {
               this.close();
               // this.setState({
               //   visible: false,
@@ -289,22 +364,16 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
           }
         }
       }
+      this.startX = this.startY = this.moveX = this.moveY = 0;
+      this.multiTouch = false;
+      this.touchStartTime = 0;
       this.setState({
-        startX: 0,
-        startY: 0,
-        moveX: 0,
-        moveY: 0,
         pinchScale: 1,
         touchDistance: 0,
-        multiTouch: false,
         touch: false,
-        touchStartTime: 0,
       });
     }else {
-      this.setState({
-        moveX: e.touches[0].pageX,
-        moveY: e.touches[0].pageY,
-      });
+      this.moveX = this.moveY = 0;
     }
   }
 
@@ -424,11 +493,15 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
       diffWidth = imgDefaultSize.width;
       diffHeight = imgDefaultSize.height;
     }
+    diffWidth = Math.trunc(diffWidth);
+    diffHeight = Math.trunc(diffHeight);
+    const left = this.state.left - diffWidth / 2 - diffX * diffScale;
+    const top = this.state.top - diffHeight / 2 - diffY * diffScale;
     this.setState({
       width: this.state.width + diffWidth,
       height: this.state.height + diffHeight,
-      top: this.state.top - diffHeight / 2 - diffY * diffScale,
-      left: this.state.left - diffWidth / 2 - diffX * diffScale,
+      left: left,
+      top: top,
       scale: scale,
       pinchScale,
     });
@@ -554,8 +627,8 @@ export default class ViewerCore extends React.Component<ViewerProps, Partial<Vie
           }
 
         })}
-        <div style={{position: 'absolute',top: 0, left: 0, zIndex: zIndex + 10}}>{this.text1}</div>
-        <div style={{position: 'absolute',top: 20, left: 0, zIndex: zIndex + 10}}>{this.text2}</div>
+        <div ref={this.text1} style={{position: 'absolute',top: 0, left: 0, zIndex: zIndex + 10}}></div>
+        <div ref={this.text2} style={{position: 'absolute',top: 20, left: 0, zIndex: zIndex + 10}}></div>
       </div>
     );
   }

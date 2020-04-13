@@ -15,10 +15,6 @@ export interface ViewerCanvasProps {
 
 export default class ViewerCanvas extends React.Component<ViewerCanvasProps, any> {
 
-  constructor() {
-    super();
-  }
-
   render() {
     let imgStyle: React.CSSProperties = {
       width: `${this.props.width}px`,
